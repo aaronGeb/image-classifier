@@ -5,6 +5,9 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+concurrency:
+  group: ${{ github.workflow }}-${{github.ref}}
+  cancel-in-progress: true
 
 jobs:
 
@@ -12,6 +15,8 @@ jobs:
   backend-test:
     name: Backend — pytest
     runs-on: ubuntu-latest
+    if:
+      github.event_name == 'push' || contains(github.event.pull_request.changed_files, 'backend/')
     steps:
       - uses: actions/checkout@v4
 
@@ -22,7 +27,8 @@ jobs:
 
       - name: Install dependencies
         working-directory: backend
-        run: pip install -r requirements.txt
+        run: pip install -r fastapi uvicorn sqlalchemy alembic pydantic-settings pydantic[email] python-jose[cryptography] passlib[bcrypt] python-multipart psycopg2-binary pytest httpx Pillow
+
 
       - name: Run tests
         working-directory: backend
@@ -30,7 +36,7 @@ jobs:
           DATABASE_URL: sqlite:///./test.db
           SECRET_KEY: ci-only-secret-key
           ENVIRONMENT: development
-          DEBUG: "true"
+          DEBUG: "false"
         run: pytest -v --tb=short
 
   # Frontend type-check + build
